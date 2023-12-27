@@ -34,5 +34,7 @@ export function CanisterErrorMap(error: Error) {
     // Collection errors 
     }
 
-    return Err({UnknownError: error.message});
+    const message = `${error.name}: ${error.message}`;
+
+    return Err({UnknownError: message});
 }
