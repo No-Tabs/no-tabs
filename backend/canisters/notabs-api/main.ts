@@ -5,6 +5,8 @@ import { MemberWorkspaceRoleInfoVec, WorkspaceService } from "./modules/workspac
 import { CollectionService } from "./modules/collection/collection.service";
 import { WorkspaceMember } from "./modules/workspace/workspace.entities";
 import { CanisterErrorHandler } from "./error.handler";
+import { isEqual } from "../../packages/principal";
+import { AuthService } from "./modules/auth/auth.service";
 
 const CreateUserData = Record({
     username: text,
@@ -17,11 +19,13 @@ const CreateWorkspaceData = Record({
 
 const CreateCollectionData = Record({
     name: text,
+    description: text,
     private: bool,
     tags: Vec(text),
 });
 
 const userService = new UserService();
+const authService = new AuthService(userService);
 const workspaceService = new WorkspaceService();
 const collectionService = new CollectionService();
 
@@ -38,7 +42,6 @@ const CanisterErrors = Variant({
 
 export default Canister({
     createUser: update([CreateUserData], Result(bool, CanisterErrors), (data) => {
-        let userCreated = false;
         const userId = ic.caller();
 
         try {
@@ -49,7 +52,6 @@ export default Canister({
             }
 
             userService.create(userId, data);
-            userCreated = true;
             workspaceService.create(userId, workspace);
             return Ok(true);
         } catch(error: any) {
@@ -58,6 +60,7 @@ export default Canister({
     }),
     getProfile: query([], Result(User, CanisterErrors), () => {
         try {
+            authService.validate();
             const userId = ic.caller();
             const user = userService.get(userId);
             return Ok(user);
@@ -66,26 +69,26 @@ export default Canister({
         }
     }),
     createWorkspace: update([CreateWorkspaceData], Result(Principal, CanisterErrors), (data) => {
-        try {
+        try {            
+            authService.validate();
             const userId = ic.caller();
-            const user = userService.get(userId);
             const workspace = {
                 name: data.name,
                 members: data.members,
                 scope: {Team: null},
             }
 
-            const workspaceId = workspaceService.create(user.id, workspace);
+            const workspaceId = workspaceService.create(userId, workspace);
             return Ok(workspaceId);
         } catch(error: any) {
             return CanisterErrorHandler(error);
         }
     }),
-    getWorkspaces: query([], Result(MemberWorkspaceRoleInfoVec, CanisterErrors), () => {
+    getMyWorkspaces: query([], Result(MemberWorkspaceRoleInfoVec, CanisterErrors), () => {
         try {
+            authService.validate();
             const userId = ic.caller();
-            const user = userService.get(userId);
-            const workspaces = workspaceService.getWorkspacesByMember(user.id);
+            const workspaces = workspaceService.getWorkspacesByMember(userId);
 
             return Ok(workspaces);
         } catch(error: any) {
@@ -94,17 +97,17 @@ export default Canister({
     }),
     createCollection: update([Principal, CreateCollectionData], Result(Principal, CanisterErrors), (workspaceId, data) => {
         try {
+            authService.validate();
             const userId = ic.caller();
-            const user = userService.get(userId);
             const workspace = workspaceService.get(workspaceId);
 
-            const isMember = workspace.members.find((member) => member.id === user.id);
+            const isMember = workspace.members.find((member) => isEqual(member.id, userId));
 
             if (!isMember) {
-                return Err({WorkspaceDoesNotHaveThisMember: user.id});
+                return Err({WorkspaceDoesNotHaveThisMember: userId});
             }
 
-            const collectionId = collectionService.create(user.id, workspace.id, data);
+            const collectionId = collectionService.create(userId, workspace.id, data);
 
             return Ok(collectionId);
         } catch(error: any) {

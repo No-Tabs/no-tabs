@@ -1,9 +1,10 @@
 import { Principal, Record, StableBTreeMap, Vec, bool, ic, text } from "azle";
 import { Collection, CollectionMember } from "./collection.entities";
-import { generateId } from "../../../../packages/helpers";
+import { generate } from "../../../../packages/principal";
 
 export const CreateCollectionData = Record({
     name: text,
+    description: text,
     private: bool,
     tags: Vec(text),
 });
@@ -12,6 +13,10 @@ export type CreateCollectionData = typeof CreateCollectionData.tsType;
 
 export class CollectionService {
     private collections = StableBTreeMap<Principal, Collection>(2);
+
+    public exists(id: Principal): boolean {
+        return this.collections.containsKey(id);
+    }
     
     public create(createdBy: Principal, workspace: Principal, data: CreateCollectionData): Principal {
         // TODO: Validate that workspace exists
@@ -19,7 +24,7 @@ export class CollectionService {
         // TODO: Validate that collection name is not duplicated for the createdBy
         // TODO: Validate that tags are not duplicated
 
-        const id = generateId();
+        const id = generate();
 
         const member: CollectionMember = {
             id: createdBy,
@@ -29,6 +34,7 @@ export class CollectionService {
         const collection: Collection = {
             id,
             name: data.name,
+            description: data.description,
             private: data.private,
             workspace,
             members: [member],

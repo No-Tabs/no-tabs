@@ -24,10 +24,10 @@ export const Tab = Record({
 
 export type Tab = typeof Tab.tsType;
 
-
 export const Collection = Record({
   id: Principal,
   name: text,
+  description: text,
   private: bool,
   workspace: Principal,
   members: Vec(CollectionMember),

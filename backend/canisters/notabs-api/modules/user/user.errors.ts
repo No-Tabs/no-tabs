@@ -1,13 +1,15 @@
+import { Principal } from "azle";
+
 export class UserDoesNotExistError extends Error {
-    constructor(message: string) {
-        super(message);
+    constructor(message: Principal) {
+        super(message.toString());
         this.name = "UserDoesNotExist";
     }
 }
 
 export class UserAlreadyExistsError extends Error {
-    constructor(message: string) {
-        super(message);
+    constructor(message: Principal) {
+        super(message.toString());
         this.name = "UserAlreadyExists";
     }
 }
@@ -20,8 +22,8 @@ export class UsernameAlreadyExistsError extends Error {
 }
 
 export class CollectionAlreadyAddedError extends Error {
-    constructor(message: string) {
-        super(message);
+    constructor(message: Principal) {
+        super(message.toString());
         this.name = "CollectionAlreadyAdded";
     }
 }

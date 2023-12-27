@@ -6,7 +6,7 @@ import {
 } from "azle";
 
 import { User } from "./user.entities";
-import { CollectionAlreadyAddedError, UserAlreadyExistsError, UserDoesNotExistError } from "./user.errors";
+import { CollectionAlreadyAddedError, UserAlreadyExistsError, UserDoesNotExistError, UsernameAlreadyExistsError } from "./user.errors";
 
 export type CreateUserData = {
     username: string;
@@ -22,21 +22,25 @@ export class UserService {
     public get(id: Principal): User {
         const user = this.users.get(id).Some;
 
-        if (!user) throw new UserDoesNotExistError(id.toString());
+        if (!user) throw new UserDoesNotExistError(id);
     
         return user;
     }
 
-    public create(id: Principal, data: CreateUserData): void {
-        const existingUser = this.users.get(id).Some;
+    public exists(id: Principal): boolean {
+        return this.users.containsKey(id);
+    }
 
-        if (existingUser) throw new UserAlreadyExistsError(id.toString());
+    public create(id: Principal, data: CreateUserData): void {
+        const exists = this.exists(id);
+
+        if (exists) throw new UserAlreadyExistsError(id);
 
         const existingUsername = this.users
             .values()
             .find((user) => user.username === data.username);
 
-        if (existingUsername) throw new UserAlreadyExistsError(existingUsername.username);
+        if (existingUsername) throw new UsernameAlreadyExistsError(existingUsername.username);
 
         const user: User = {
             id,
@@ -49,11 +53,11 @@ export class UserService {
     }
 
     public delete(id: Principal): void {
-        const user = this.users.get(id).Some;
+        const exists = this.exists(id);
 
-        if (!user) throw new UserDoesNotExistError(id.toString());
+        if (!exists) throw new UserDoesNotExistError(id);
 
-        // TODO: Remove workspaces which is the unique owner
+        // TODO: Remove workspaces where is the unique owner
 
         this.users.remove(id);
     }
@@ -61,11 +65,11 @@ export class UserService {
     public addFollow(id: Principal, collection: Principal): void {
         const user = this.users.get(id).Some;
 
-        if (!user) throw new UserDoesNotExistError(id.toString());
+        if (!user) throw new UserDoesNotExistError(id);
 
         const existingFollow = user.follow.find((f) => f === collection);
 
-        if (existingFollow) throw new CollectionAlreadyAddedError(collection.toString());
+        if (existingFollow) throw new CollectionAlreadyAddedError(collection);
 
         // TODO: Validate that followId is a valid collection & is not private
 

@@ -1,7 +1,7 @@
 import { Principal, Record, StableBTreeMap, Vec, ic, text } from "azle";
 import { Workspace, WorkspaceMember, WorkspaceMemberRoles, WorkspaceScope } from "./workspace.entities";
-import { generateId } from "../../../../packages/helpers";
-import { WorkspaceDoesNotExistError, WorkspaceNameAlreadyExistsError } from "./workspace.errors";
+import { isEqual, generate } from "../../../../packages/principal";
+import { WorkspaceCantBeDeletedByNonOwnersError, WorkspaceDoesNotExistError, WorkspaceMemberDoesNotExistError, WorkspaceMemberRolCantAddMembersError, WorkspaceMemberRolCantDeleteMembersError, WorkspaceNameAlreadyExistsError, WorkspaceOwnerRoleCantBeAssignByNoOwnersError, WorkspaceOwnersCantBeDeletedByNoOwnersError } from "./workspace.errors";
 
 export const CreateWorkspaceData = Record({
     name: text,
@@ -32,9 +32,13 @@ export class WorkspaceService {
     public get(id: Principal): Workspace {
         const workspace = this.workspaces.get(id).Some;
 
-        if (!workspace) throw new WorkspaceDoesNotExistError(id.toString());
+        if (!workspace) throw new WorkspaceDoesNotExistError(id);
 
         return workspace;
+    }
+
+    public exists(id: Principal): boolean {
+        return this.workspaces.containsKey(id);
     }
 
     public create(createdBy: Principal, data: CreateWorkspaceData): Principal {
@@ -44,7 +48,7 @@ export class WorkspaceService {
 
         // TODO: Personal workspaces should be unique per user
 
-        const id = generateId();
+        const id = generate();
 
         const owner: WorkspaceMember = {
             id: createdBy,
@@ -68,13 +72,35 @@ export class WorkspaceService {
         return id;
     }
 
-    public addMemmbers(workspaceId: Principal, members: Vec<WorkspaceMember>): void {
+    public addMemmbers(requesterId: Principal, workspaceId: Principal, members: Vec<WorkspaceMember>): void {
         const workspace = this.workspaces.get(workspaceId).Some;
 
-        if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId.toString());
+        if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId);
 
-        // TODO: Only allow owners and admins to add members
-        // TODO: Validate that members are not duplicated
+        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+
+        if (!requester) {
+            throw new WorkspaceMemberDoesNotExistError(requesterId);
+        }
+
+        if (requester.role.Member) {
+            throw new WorkspaceMemberRolCantAddMembersError();
+        }
+
+        const areThereOwners = members.some((member) => member.role.Owner);
+
+        if (areThereOwners && !requester.role.Owner) {
+            throw new WorkspaceOwnerRoleCantBeAssignByNoOwnersError();
+        }
+
+        const existingMembers = workspace.members.map((member) => member.id.toString());
+        const newMembers = members.map((member) => member.id.toString());
+        const duplicatedMembers = newMembers.filter((member) => existingMembers.includes(member));
+
+        if (duplicatedMembers.length > 0) {
+            throw new Error("Duplicated members are not allowed.");
+        }
+
         // TODO: Validate that members are valid users
 
         workspace.members = [...workspace.members, ...members];
@@ -82,25 +108,69 @@ export class WorkspaceService {
         this.workspaces.insert(workspaceId, workspace);
     }
 
-    public remove(workspaceId: Principal): void {
+    public removeMember(requesterId: Principal, memberId: Principal, workspaceId: Principal): void {
         const workspace = this.workspaces.get(workspaceId).Some;
 
-        if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId.toString());
+        if (!workspace) {
+            throw new WorkspaceDoesNotExistError(workspaceId);
+        }
 
-        // TODO: Only allow owners to remove workspaces
+        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+
+        if (!requester) {
+            throw new WorkspaceMemberDoesNotExistError(requesterId);
+        }
+
+        if (requester.role.Member) {
+            throw new WorkspaceMemberRolCantDeleteMembersError();
+        }
+
+        const member = workspace.members.find((member) => isEqual(member.id, memberId));
+
+        if (!member) {
+            throw new WorkspaceMemberDoesNotExistError(memberId);
+        }
+
+        if (member.role.Owner && !requester.role.Owner) {
+            throw new WorkspaceOwnersCantBeDeletedByNoOwnersError();
+        }
+
+        workspace.members = workspace.members.filter((member) => !isEqual(member.id, memberId));
+
+        this.workspaces.insert(workspaceId, workspace);
+
+        // TODO: remove permissions from collections that this workspace owns
+    }
+
+    public remove(requesterId: Principal, workspaceId: Principal): void {
+        const workspace = this.workspaces.get(workspaceId).Some;
+
+        if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId);
+
+        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+
+        if (!requester) {
+            throw new WorkspaceMemberDoesNotExistError(requesterId);
+        }
+
+        if (!requester.role.Owner) {
+            throw new WorkspaceCantBeDeletedByNonOwnersError(workspaceId);
+        }
+
         // TODO: Remove collections
         // TODO: Remove all collections followed by users
 
         this.workspaces.remove(workspaceId);
     }
 
-    public getWorkspacesByMember(userId: Principal): MemberWorkspaceRoleInfoVec {
+    public getWorkspacesByMember(userId: Principal): MemberWorkspaceRoleInfoVec {        
         const workspaces = this.workspaces.values().reduce((result: MemberWorkspaceRoleInfoVec, workspace) => {
-            const member = workspace.members.find((member) => member.id === userId);
+            const member = workspace.members.find((member) => isEqual(member.id, userId));
             
             if (member) {
                 result.push({ workspace, role: member.role });
             }
+            
             return result;
         }, []);
 
