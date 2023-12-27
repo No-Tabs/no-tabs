@@ -21,6 +21,13 @@ export class WorkspaceUserDoesNotExistError extends Error {
     }
 }
 
+export class WorkspaceAddUsersToPersonalScopeNotAllowedError extends Error {
+    constructor(message: Principal) {
+        super(message.toString());
+        this.name = "WorkspaceAddUsersToPersonalScopeNotAllowedError";
+    }
+}
+
 export class WorkspaceMemberRolCantAddUsersError extends Error {
     constructor(message?: string) {
         super(message);

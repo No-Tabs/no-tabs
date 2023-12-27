@@ -24,6 +24,11 @@ const CreateCollectionData = Record({
     tags: Vec(text),
 });
 
+const AddTabToCollectionData = Record({
+    name: text,
+    url: text,
+});
+
 const userService = new UserService();
 const authService = new AuthService(userService);
 const workspaceService = new WorkspaceService();
@@ -48,7 +53,7 @@ export default Canister({
             const workspace = {
                 name: `${data.username}'s Workspace}`,
                 users: [],
-                scope: {Personal: null} 
+                scope: {Personal: null}
             }
 
             userService.create(userId, data);
@@ -110,6 +115,35 @@ export default Canister({
             const collectionId = collectionService.create(userId, workspace.id, data);
 
             return Ok(collectionId);
+        } catch(error: any) {
+            return CanisterErrorHandler(error);
+        }
+    }),
+    addTabToCollection: update([Principal, AddTabToCollectionData], Result(bool, CanisterErrors), (collectionId, data) => {
+        try {
+            authService.validate();
+            const userId = ic.caller();
+
+            const collection = {
+                name: data.name,
+                url: data.url,
+            }
+
+            collectionService.addTab(userId, collectionId, collection);
+
+            return Ok(true);
+        } catch(error: any) {
+            return CanisterErrorHandler(error);
+        }
+    }),
+    removeTabFromCollection: update([Principal], Result(bool, CanisterErrors), (tabId) => {
+        try {
+            authService.validate();
+            const userId = ic.caller();
+
+            collectionService.removeTab(userId, tabId);
+
+            return Ok(true);
         } catch(error: any) {
             return CanisterErrorHandler(error);
         }

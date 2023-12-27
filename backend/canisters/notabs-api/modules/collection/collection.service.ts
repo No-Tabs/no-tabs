@@ -1,6 +1,7 @@
 import { Principal, Record, StableBTreeMap, Vec, bool, ic, text } from "azle";
-import { Collection, CollectionMember } from "./collection.entities";
-import { generate } from "../../../../packages/principal";
+import { Collection, CollectionMember, Tab } from "./collection.entities";
+import { generate, isEqual } from "../../../../packages/principal";
+import { CollectionDoesNotExistError, CollectionTabDoesNotExistError, CollectionUserIsNotMemberError } from "./collection.errors";
 
 export const CreateCollectionData = Record({
     name: text,
@@ -11,8 +12,25 @@ export const CreateCollectionData = Record({
 
 export type CreateCollectionData = typeof CreateCollectionData.tsType;
 
+export const AddTabData = Record({
+    name: text,
+    url: text,
+});
+
+export type AddTabData = typeof AddTabData.tsType;
+
 export class CollectionService {
     private collections = StableBTreeMap<Principal, Collection>(2);
+
+    public get(id: Principal): Collection {
+        const collection = this.collections.get(id).Some;
+
+        if (!collection) {
+            throw new CollectionDoesNotExistError(id);
+        }
+
+        return collection;
+    }
 
     public exists(id: Principal): boolean {
         return this.collections.containsKey(id);
@@ -55,6 +73,50 @@ export class CollectionService {
     // TODO: Add tags to collection
     // TODO: Remove tags from collection
     // TODO: Remove collection & remove follow from all users
-    // TODO: Add tab to collection
-    // TODO: Remove tab from collection
+    
+    public addTab(requesterId: Principal, collectionId: Principal, data: AddTabData): void {
+        const collection = this.collections.get(collectionId).Some;
+
+        if (!collection) {
+            throw new CollectionDoesNotExistError(collectionId);
+        }
+
+        const isContributor = collection.members.find((member) => isEqual(member.id, requesterId));
+
+        if (!isContributor) {
+            throw new CollectionUserIsNotMemberError(requesterId);
+        }
+
+        const tabId = generate();
+
+        const tab: Tab = {
+            id: tabId,
+            name: data.name,
+            url: data.url,
+            createAt: ic.time(),
+            updatedAt: ic.time(),
+        };
+
+        collection.tabs.push(tab);
+
+        this.collections.insert(collectionId, collection);
+    }
+
+    public removeTab(requesterId: Principal, tabId: Principal): void {
+        const collections = this.collections.values().filter((collection) => collection.members.find((member) => isEqual(member.id, requesterId)));
+
+        if (collections.length === 0) {
+            throw new CollectionTabDoesNotExistError(tabId);
+        }
+        
+        const collection = collections.flat().find((collection) => collection.tabs.find((tab) => isEqual(tab.id, tabId)));
+
+        if (!collection) {
+            throw new CollectionTabDoesNotExistError(tabId);
+        }
+
+        collection.tabs = collection.tabs.filter((tab) => !isEqual(tab.id, tabId));
+
+        this.collections.insert(collection.id, collection);
+    }
 }

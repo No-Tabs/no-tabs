@@ -9,7 +9,8 @@ import {
     WorkspaceOwnerRoleCantBeAssignedByNoOwnersError,
     WorkspaceMemberRolCantDeleteUsersError,
     WorkspaceOwnersCantBeDeletedByNoOwnersError,
-    WorkspaceCantBeDeletedByNonOwnersError
+    WorkspaceCantBeDeletedByNonOwnersError,
+    WorkspaceAddUsersToPersonalScopeNotAllowedError
 } from "./workspace.errors";
 
 export const CreateWorkspaceData = Record({
@@ -90,6 +91,10 @@ export class WorkspaceService {
 
         if (!requester) {
             throw new WorkspaceUserDoesNotExistError(requesterId);
+        }
+
+        if(workspace.scope.Personal) {
+            throw new WorkspaceAddUsersToPersonalScopeNotAllowedError(workspaceId);
         }
 
         if (requester.role.Member) {
