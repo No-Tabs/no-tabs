@@ -1,12 +1,11 @@
-import { Canister, Err, Ok, Principal, Record, Result, Variant, Vec, bool, ic, query, text, update } from "azle";
-import { UserService } from "./modules/user/user.service";
-import { User } from "./modules/user/user.entities";
-import { MemberWorkspaceRoleInfoVec, WorkspaceService } from "./modules/workspace/workspace.service";
-import { CollectionService } from "./modules/collection/collection.service";
-import { WorkspaceUser } from "./modules/workspace/workspace.entities";
-import { CanisterErrorHandler } from "./error.handler";
+import { Canister, Err, Ok, Principal, Record, Result, Vec, bool, ic, query, text, update } from "azle";
+import { CanisterErrorMap, CanisterErrorResponse } from "./canister.errors";
 import { isEqual } from "../../packages/principal";
-import { AuthService } from "./modules/auth/auth.service";
+
+import { User, UserService } from "./modules/user";
+import { AuthService } from "./modules/auth";
+import { CollectionService } from "./modules/collection";
+import { MemberWorkspaceRoleInfoVec, WorkspaceUser, WorkspaceService } from "./modules/workspace";
 
 const CreateUserData = Record({
     username: text,
@@ -34,19 +33,8 @@ const authService = new AuthService(userService);
 const workspaceService = new WorkspaceService();
 const collectionService = new CollectionService();
 
-const CanisterErrors = Variant({
-    UserNotAuthenticated: Principal,
-    UserDoesNotExist: Principal,
-    UsernameAlreadyExists: text,
-    WorkspaceDoesNotExist: Principal,
-    WorkspaceNameAlreadyExists: text,
-    WorkspaceDoesNotHaveThisUser: Principal,
-    CollectionDoesNotExist: Principal,
-    UnknownError: text,
-});
-
 export default Canister({
-    createUser: update([CreateUserData], Result(bool, CanisterErrors), (data) => {
+    createUser: update([CreateUserData], Result(bool, CanisterErrorResponse), (data) => {
         const userId = ic.caller();
 
         try {
@@ -60,20 +48,20 @@ export default Canister({
             workspaceService.create(userId, workspace);
             return Ok(true);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    getProfile: query([], Result(User, CanisterErrors), () => {
+    getProfile: query([], Result(User, CanisterErrorResponse), () => {
         try {
             authService.validate();
             const userId = ic.caller();
             const user = userService.get(userId);
             return Ok(user);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    createWorkspace: update([CreateWorkspaceData], Result(Principal, CanisterErrors), (data) => {
+    createWorkspace: update([CreateWorkspaceData], Result(Principal, CanisterErrorResponse), (data) => {
         try {            
             authService.validate();
             const userId = ic.caller();
@@ -86,10 +74,10 @@ export default Canister({
             const workspaceId = workspaceService.create(userId, workspace);
             return Ok(workspaceId);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    getMyWorkspaces: query([], Result(MemberWorkspaceRoleInfoVec, CanisterErrors), () => {
+    getMyWorkspaces: query([], Result(MemberWorkspaceRoleInfoVec, CanisterErrorResponse), () => {
         try {
             authService.validate();
             const userId = ic.caller();
@@ -97,10 +85,10 @@ export default Canister({
 
             return Ok(workspaces);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    createCollection: update([Principal, CreateCollectionData], Result(Principal, CanisterErrors), (workspaceId, data) => {
+    createCollection: update([Principal, CreateCollectionData], Result(Principal, CanisterErrorResponse), (workspaceId, data) => {
         try {
             authService.validate();
             const userId = ic.caller();
@@ -116,10 +104,10 @@ export default Canister({
 
             return Ok(collectionId);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    addTabToCollection: update([Principal, AddTabToCollectionData], Result(bool, CanisterErrors), (collectionId, data) => {
+    addTabToCollection: update([Principal, AddTabToCollectionData], Result(bool, CanisterErrorResponse), (collectionId, data) => {
         try {
             authService.validate();
             const userId = ic.caller();
@@ -133,10 +121,10 @@ export default Canister({
 
             return Ok(true);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     }),
-    removeTabFromCollection: update([Principal], Result(bool, CanisterErrors), (tabId) => {
+    removeTabFromCollection: update([Principal], Result(bool, CanisterErrorResponse), (tabId) => {
         try {
             authService.validate();
             const userId = ic.caller();
@@ -145,7 +133,7 @@ export default Canister({
 
             return Ok(true);
         } catch(error: any) {
-            return CanisterErrorHandler(error);
+            return CanisterErrorMap(error);
         }
     })
 });

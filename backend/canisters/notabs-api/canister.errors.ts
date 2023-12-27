@@ -1,10 +1,20 @@
-import { Err, Principal } from "azle";
-import { UserDoesNotExistError, UsernameAlreadyExistsError } from "./modules/user/user.errors";
-import { WorkspaceDoesNotExistError, WorkspaceNameAlreadyExistsError } from "./modules/workspace/workspace.errors";
-import { NotAuthenticatedError } from "./modules/auth/auth.errors";
+import { Err, Principal, Variant, text } from "azle";
+import { UserDoesNotExistError, UsernameAlreadyExistsError } from "./modules/user";
+import { WorkspaceDoesNotExistError, WorkspaceNameAlreadyExistsError } from "./modules/workspace";
+import { NotAuthenticatedError } from "./modules/auth";
 
+export const CanisterErrorResponse = Variant({
+    UserNotAuthenticated: Principal,
+    UserDoesNotExist: Principal,
+    UsernameAlreadyExists: text,
+    WorkspaceDoesNotExist: Principal,
+    WorkspaceNameAlreadyExists: text,
+    WorkspaceDoesNotHaveThisUser: Principal,
+    CollectionDoesNotExist: Principal,
+    UnknownError: text,
+});
 
-export function CanisterErrorHandler(error: any) {
+export function CanisterErrorMap(error: any) {
     // Auth errors
     if (error instanceof NotAuthenticatedError) {
         const userId = Principal.fromText(error.message);
