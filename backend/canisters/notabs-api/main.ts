@@ -3,7 +3,7 @@ import { UserService } from "./modules/user/user.service";
 import { User } from "./modules/user/user.entities";
 import { MemberWorkspaceRoleInfoVec, WorkspaceService } from "./modules/workspace/workspace.service";
 import { CollectionService } from "./modules/collection/collection.service";
-import { WorkspaceMember } from "./modules/workspace/workspace.entities";
+import { WorkspaceUser } from "./modules/workspace/workspace.entities";
 import { CanisterErrorHandler } from "./error.handler";
 import { isEqual } from "../../packages/principal";
 import { AuthService } from "./modules/auth/auth.service";
@@ -14,7 +14,7 @@ const CreateUserData = Record({
 
 const CreateWorkspaceData = Record({
     name: text,
-    members: Vec(WorkspaceMember),
+    users: Vec(WorkspaceUser),
 });
 
 const CreateCollectionData = Record({
@@ -35,7 +35,7 @@ const CanisterErrors = Variant({
     UsernameAlreadyExists: text,
     WorkspaceDoesNotExist: Principal,
     WorkspaceNameAlreadyExists: text,
-    WorkspaceDoesNotHaveThisMember: Principal,
+    WorkspaceDoesNotHaveThisUser: Principal,
     CollectionDoesNotExist: Principal,
     UnknownError: text,
 });
@@ -47,7 +47,7 @@ export default Canister({
         try {
             const workspace = {
                 name: `${data.username}'s Workspace}`,
-                members: [],
+                users: [],
                 scope: {Personal: null} 
             }
 
@@ -74,7 +74,7 @@ export default Canister({
             const userId = ic.caller();
             const workspace = {
                 name: data.name,
-                members: data.members,
+                users: data.users,
                 scope: {Team: null},
             }
 
@@ -101,10 +101,10 @@ export default Canister({
             const userId = ic.caller();
             const workspace = workspaceService.get(workspaceId);
 
-            const isMember = workspace.members.find((member) => isEqual(member.id, userId));
+            const isUser = workspace.users.find((user) => isEqual(user.id, userId));
 
-            if (!isMember) {
-                return Err({WorkspaceDoesNotHaveThisMember: userId});
+            if (!isUser) {
+                return Err({WorkspaceDoesNotHaveThisUser: userId});
             }
 
             const collectionId = collectionService.create(userId, workspace.id, data);

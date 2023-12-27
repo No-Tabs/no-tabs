@@ -1,19 +1,19 @@
 import { Null, Principal, Record, Variant, Vec, nat64, text } from "azle";
 
-export const WorkspaceMemberRoles = Variant({
+export const WorkspaceRoles = Variant({
   Owner: Null,
   Admin: Null,
   Member: Null,
 });
 
-export type WorkspaceMemberRoles = typeof WorkspaceMemberRoles.tsType;
+export type WorkspaceRoles = typeof WorkspaceRoles.tsType;
 
-export const WorkspaceMember = Record({
+export const WorkspaceUser = Record({
   id: Principal,
-  role: WorkspaceMemberRoles,
+  role: WorkspaceRoles,
 });
 
-export type WorkspaceMember = typeof WorkspaceMember.tsType;
+export type WorkspaceUser = typeof WorkspaceUser.tsType;
 
 export const WorkspaceScope = Variant({
   Personal: Null,
@@ -26,7 +26,7 @@ export const Workspace = Record({
   id: Principal,
   name: text,
   scope: WorkspaceScope,
-  members: Vec(WorkspaceMember),
+  users: Vec(WorkspaceUser),
   createdBy: Principal,
   createdAt: nat64,
 });

@@ -1,11 +1,20 @@
 import { Principal, Record, StableBTreeMap, Vec, ic, text } from "azle";
-import { Workspace, WorkspaceMember, WorkspaceMemberRoles, WorkspaceScope } from "./workspace.entities";
+import { Workspace, WorkspaceUser, WorkspaceRoles, WorkspaceScope } from "./workspace.entities";
 import { isEqual, generate } from "../../../../packages/principal";
-import { WorkspaceCantBeDeletedByNonOwnersError, WorkspaceDoesNotExistError, WorkspaceMemberDoesNotExistError, WorkspaceMemberRolCantAddMembersError, WorkspaceMemberRolCantDeleteMembersError, WorkspaceNameAlreadyExistsError, WorkspaceOwnerRoleCantBeAssignByNoOwnersError, WorkspaceOwnersCantBeDeletedByNoOwnersError } from "./workspace.errors";
+import { 
+    WorkspaceNameAlreadyExistsError,
+    WorkspaceDoesNotExistError,
+    WorkspaceUserDoesNotExistError,
+    WorkspaceMemberRolCantAddUsersError,
+    WorkspaceOwnerRoleCantBeAssignedByNoOwnersError,
+    WorkspaceMemberRolCantDeleteUsersError,
+    WorkspaceOwnersCantBeDeletedByNoOwnersError,
+    WorkspaceCantBeDeletedByNonOwnersError
+} from "./workspace.errors";
 
 export const CreateWorkspaceData = Record({
     name: text,
-    members: Vec(WorkspaceMember),
+    users: Vec(WorkspaceUser),
     scope: WorkspaceScope
 });
 
@@ -13,7 +22,7 @@ export type CreateWorkspaceData = typeof CreateWorkspaceData.tsType;
 
 export const MemberWorkspaceRoleInfo = Record({
     workspace: Workspace,
-    role: WorkspaceMemberRoles
+    role: WorkspaceRoles
 });
 
 export type MemberWorkspaceRoleInfo = typeof MemberWorkspaceRoleInfo.tsType;
@@ -50,7 +59,7 @@ export class WorkspaceService {
 
         const id = generate();
 
-        const owner: WorkspaceMember = {
+        const owner: WorkspaceUser = {
             id: createdBy,
             role: {"Owner": null},
         };
@@ -61,7 +70,7 @@ export class WorkspaceService {
         const workspace: Workspace = {
             id,
             name: data.name,
-            members: [owner, ...data.members],
+            users: [owner, ...data.users],
             scope: data.scope,
             createdBy,
             createdAt: ic.time(),
@@ -72,70 +81,70 @@ export class WorkspaceService {
         return id;
     }
 
-    public addMemmbers(requesterId: Principal, workspaceId: Principal, members: Vec<WorkspaceMember>): void {
+    public addMemmbers(requesterId: Principal, workspaceId: Principal, users: Vec<WorkspaceUser>): void {
         const workspace = this.workspaces.get(workspaceId).Some;
 
         if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId);
 
-        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+        const requester = workspace.users.find((user) => isEqual(user.id, requesterId));
 
         if (!requester) {
-            throw new WorkspaceMemberDoesNotExistError(requesterId);
+            throw new WorkspaceUserDoesNotExistError(requesterId);
         }
 
         if (requester.role.Member) {
-            throw new WorkspaceMemberRolCantAddMembersError();
+            throw new WorkspaceMemberRolCantAddUsersError();
         }
 
-        const areThereOwners = members.some((member) => member.role.Owner);
+        const areThereOwners = users.some((user) => user.role.Owner);
 
         if (areThereOwners && !requester.role.Owner) {
-            throw new WorkspaceOwnerRoleCantBeAssignByNoOwnersError();
+            throw new WorkspaceOwnerRoleCantBeAssignedByNoOwnersError();
         }
 
-        const existingMembers = workspace.members.map((member) => member.id.toString());
-        const newMembers = members.map((member) => member.id.toString());
-        const duplicatedMembers = newMembers.filter((member) => existingMembers.includes(member));
+        const existingUsers = workspace.users.map((user) => user.id.toString());
+        const newUsers = users.map((user) => user.id.toString());
+        const duplicatedUsers = newUsers.filter((user) => existingUsers.includes(user));
 
-        if (duplicatedMembers.length > 0) {
+        if (duplicatedUsers.length > 0) {
             throw new Error("Duplicated members are not allowed.");
         }
 
         // TODO: Validate that members are valid users
 
-        workspace.members = [...workspace.members, ...members];
+        workspace.users = [...workspace.users, ...users];
 
         this.workspaces.insert(workspaceId, workspace);
     }
 
-    public removeMember(requesterId: Principal, memberId: Principal, workspaceId: Principal): void {
+    public removeMember(requesterId: Principal, UserId: Principal, workspaceId: Principal): void {
         const workspace = this.workspaces.get(workspaceId).Some;
 
         if (!workspace) {
             throw new WorkspaceDoesNotExistError(workspaceId);
         }
 
-        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+        const requester = workspace.users.find((user) => isEqual(user.id, requesterId));
 
         if (!requester) {
-            throw new WorkspaceMemberDoesNotExistError(requesterId);
+            throw new WorkspaceUserDoesNotExistError(requesterId);
         }
 
         if (requester.role.Member) {
-            throw new WorkspaceMemberRolCantDeleteMembersError();
+            throw new WorkspaceMemberRolCantDeleteUsersError();
         }
 
-        const member = workspace.members.find((member) => isEqual(member.id, memberId));
+        const member = workspace.users.find((user) => isEqual(user.id, UserId));
 
         if (!member) {
-            throw new WorkspaceMemberDoesNotExistError(memberId);
+            throw new WorkspaceUserDoesNotExistError(UserId);
         }
 
         if (member.role.Owner && !requester.role.Owner) {
             throw new WorkspaceOwnersCantBeDeletedByNoOwnersError();
         }
 
-        workspace.members = workspace.members.filter((member) => !isEqual(member.id, memberId));
+        workspace.users = workspace.users.filter((user) => !isEqual(user.id, UserId));
 
         this.workspaces.insert(workspaceId, workspace);
 
@@ -147,10 +156,10 @@ export class WorkspaceService {
 
         if (!workspace) throw new WorkspaceDoesNotExistError(workspaceId);
 
-        const requester = workspace.members.find((member) => isEqual(member.id, requesterId));
+        const requester = workspace.users.find((user) => isEqual(user.id, requesterId));
 
         if (!requester) {
-            throw new WorkspaceMemberDoesNotExistError(requesterId);
+            throw new WorkspaceUserDoesNotExistError(requesterId);
         }
 
         if (!requester.role.Owner) {
@@ -165,10 +174,10 @@ export class WorkspaceService {
 
     public getWorkspacesByMember(userId: Principal): MemberWorkspaceRoleInfoVec {        
         const workspaces = this.workspaces.values().reduce((result: MemberWorkspaceRoleInfoVec, workspace) => {
-            const member = workspace.members.find((member) => isEqual(member.id, userId));
+            const user = workspace.users.find((user) => isEqual(user.id, userId));
             
-            if (member) {
-                result.push({ workspace, role: member.role });
+            if (user) {
+                result.push({ workspace, role: user.role });
             }
             
             return result;

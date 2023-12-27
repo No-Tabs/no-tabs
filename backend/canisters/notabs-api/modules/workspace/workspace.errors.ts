@@ -3,55 +3,55 @@ import { Principal } from "azle";
 export class WorkspaceNameAlreadyExistsError extends Error {
     constructor(message: string) {
         super(message);
-        this.name = "WorkspaceNameAlreadyExists";
+        this.name = "WorkspaceNameAlreadyExistsError";
     }
 }
 
 export class WorkspaceDoesNotExistError extends Error {
     constructor(message: Principal) {
         super(message.toString());
-        this.name = "WorkspaceDoesNotExist";
+        this.name = "WorkspaceDoesNotExistError";
     }
 }
 
-export class WorkspaceMemberDoesNotExistError extends Error {
+export class WorkspaceUserDoesNotExistError extends Error {
     constructor(message: Principal) {
         super(message.toString());
-        this.name = "WorkspaceMemberDoesNotExist";
+        this.name = "WorkspaceUserDoesNotExistError";
     }
 }
 
-export class WorkspaceMemberRolCantAddMembersError extends Error {
+export class WorkspaceMemberRolCantAddUsersError extends Error {
     constructor(message?: string) {
         super(message);
-        this.name = "WorkspaceMemberRolCantAddMembers";
+        this.name = "WorkspaceMemberRolCantAddUsersError";
     }
 }
 
-export class WorkspaceOwnerRoleCantBeAssignByNoOwnersError extends Error {
+export class WorkspaceOwnerRoleCantBeAssignedByNoOwnersError extends Error {
     constructor(message?: string) {
         super(message);
-        this.name = "WorkspaceOwnerRoleCantBeAssignByNoOwners";
+        this.name = "WorkspaceOwnerRoleCantBeAssignedByNoOwnersError";
     }
 }
 
-export class WorkspaceMemberRolCantDeleteMembersError extends Error {
+export class WorkspaceMemberRolCantDeleteUsersError extends Error {
     constructor(message?: string) {
         super(message);
-        this.name = "WorkspaceMemberRolCantDeleteMembers";
+        this.name = "WorkspaceMemberRolCantDeleteUsersError";
     }
 }
 
 export class WorkspaceOwnersCantBeDeletedByNoOwnersError extends Error {
     constructor(message?: string) {
         super(message);
-        this.name = "WorkspaceOwnersCantBeDeletedByNoOwners";
+        this.name = "WorkspaceOwnersCantBeDeletedByNoOwnersError";
     }
 }
 
 export class WorkspaceCantBeDeletedByNonOwnersError extends Error {
     constructor(message: Principal) {
         super(message.toString());
-        this.name = "WorkspaceCantBeDeletedByNonOwners";
+        this.name = "WorkspaceCantBeDeletedByNonOwnersError";
     }
 }

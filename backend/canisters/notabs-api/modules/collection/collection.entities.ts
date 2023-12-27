@@ -1,15 +1,15 @@
 import { Null, Principal, Record, Variant, Vec, bool, nat64, text } from "azle";
 
-export const CollectionMemberRoles = Variant({
+export const CollectionRoles = Variant({
   Admin: Null,
   Collaborator: Null,
 });
 
-export type CollectionMemberRoles = typeof CollectionMemberRoles.tsType;
+export type CollectionRoles = typeof CollectionRoles.tsType;
 
 export const CollectionMember = Record({
   id: Principal,
-  role: CollectionMemberRoles,
+  role: CollectionRoles,
 });
 
 export type CollectionMember = typeof CollectionMember.tsType;
