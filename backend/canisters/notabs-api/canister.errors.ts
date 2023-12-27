@@ -14,7 +14,7 @@ export const CanisterErrorResponse = Variant({
     UnknownError: text,
 });
 
-export function CanisterErrorMap(error: any) {
+export function CanisterErrorMap(error: Error) {
     // Auth errors
     if (error instanceof NotAuthenticatedError) {
         const userId = Principal.fromText(error.message);
