@@ -1,0 +1,9 @@
+# DFX
+.dfx
+dfx_generated
+
+# Azle
+.azle
+
+# Node
+node_modules

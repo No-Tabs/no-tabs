@@ -1,0 +1,12 @@
+{
+  "canisters": {
+    "notabs-api": {
+      "type": "custom",
+      "main": "backend/canisters/notabs-api/main.ts",
+      "candid": "backend/canisters/notabs-api/main.did",
+      "build": "npx azle notabs-api",
+      "wasm": ".azle/notabs-api/notabs-api.wasm",
+      "gzip": true
+    }
+  }
+}

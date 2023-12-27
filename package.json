@@ -1,0 +1,28 @@
+{
+  "name": "tabs-manager",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "frontend/apps/*"
+  ],
+  "engines": {
+    "node": ">=18.x",
+    "yarn": ">=1.19.0 < 2.0.0"
+  },
+  "scripts": {
+    "dfx_install": "DFX_VERSION=0.15.1 sh -ci \"$(curl -fsSL https://sdk.dfinity.org/install.sh)\"",
+    "replica_start": "dfx start --background",
+    "replica_stop": "dfx stop",
+    "canister_deploy_local": "dfx deploy tabs",
+    "canister_deploy_mainnet": "dfx deploy --network ic tabs",
+    "canister_uninstall": "dfx canister uninstall-code tabs"
+  },
+  "dependencies": {
+    "azle": "0.19.0"
+  },
+  "devDependencies": {
+    "@trivago/prettier-plugin-sort-imports": "4.3.0",
+    "prettier": "3.1.1",
+    "turbo": "^1.11.2"
+  }
+}
